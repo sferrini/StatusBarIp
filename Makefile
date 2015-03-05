@@ -1,4 +1,3 @@
-THEOS_DEVICE_IP=192.168.1.10
 SDKVERSION=8.1
 
 include theos/makefiles/common.mk

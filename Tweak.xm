@@ -1,22 +1,82 @@
 #import <ifaddrs.h>
 #import <arpa/inet.h>
+#import <objc/runtime.h>
 
-@interface SpringBoard : NSObject
-- (NSString *)getIPAddress;
+@interface SBWiFiManager : NSObject
++ (id)sharedInstance;
+- (BOOL)wiFiEnabled;
 @end
 
-%hook SpringBoard
+@interface UIStatusBarDataNetworkItemView : UIView
+- (NSString *)getIPAddress;
+- (void)fadeInView:(UIView *)view;
+- (void)fadeOutView:(UIView *)view;
+@end
 
-- (void)applicationDidFinishLaunching:(id)application
+%hook UIStatusBarDataNetworkItemView
+
+- (void)setUserInteractionEnabled:(BOOL)set
 {
-    %orig;
+    %orig(YES);
+}
 
-    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Current IP address:"
-                                                    message:[self getIPAddress]
-                                                   delegate:nil
-                                          cancelButtonTitle:@"Ok"
-                                          otherButtonTitles:nil];
-    [alert show];
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    if (![[objc_getClass("SBWiFiManager") sharedInstance] wiFiEnabled]) {
+        return;
+    }
+
+    UIView *backgroundView = [[UIView alloc] initWithFrame:self.superview.bounds];
+    backgroundView.backgroundColor = [UIColor clearColor];
+    backgroundView.alpha = 0.f;
+
+    UILabel *ipLabel = [[UILabel alloc] initWithFrame:backgroundView.bounds];
+    ipLabel.backgroundColor = [UIColor clearColor];
+    ipLabel.font = [UIFont boldSystemFontOfSize:13];
+    ipLabel.textColor = [UIColor whiteColor];
+    ipLabel.textAlignment = NSTextAlignmentCenter;
+    ipLabel.text = [self getIPAddress];
+
+    [backgroundView addSubview:ipLabel];
+    [self.superview addSubview:backgroundView];
+
+    [self fadeInView:backgroundView];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self fadeOutView:backgroundView];
+    });
+}
+
+%new
+- (void)fadeInView:(UIView *)view
+{
+    [UIView animateWithDuration:0.2 animations:^{
+        for (UIView *item in self.superview.subviews) {
+            if (item != view) {
+                item.alpha = 0.f;
+            }
+        }
+    } completion:^(BOOL finished) {
+        [UIView animateWithDuration:0.2 animations:^{
+            view.alpha = 1.f;
+        }];
+    }];
+}
+
+%new
+- (void)fadeOutView:(UIView *)view
+{
+    [UIView animateWithDuration:0.2 animations:^{
+        view.alpha = 0.f;
+    } completion:^(BOOL finished) {
+        [view removeFromSuperview];
+        [UIView animateWithDuration:0.2 animations:^{
+            for (UIView *item in self.superview.subviews) {
+                if (item != view) {
+                    item.alpha = 1.f;
+                }
+            }
+        }];
+    }];
 }
 
 %new
@@ -25,10 +85,8 @@
     NSString *address = @"error";
     struct ifaddrs *interfaces = NULL;
     struct ifaddrs *temp_addr = NULL;
-    int success = 0;
     // retrieve the current interfaces - returns 0 on success
-    success = getifaddrs(&interfaces);
-    if (success == 0) {
+    if (getifaddrs(&interfaces) == 0) {
         // Loop through linked list of interfaces
         temp_addr = interfaces;
         while(temp_addr != NULL) {
