@@ -1,8 +1,8 @@
 .DS_Store
-.theos
-theos
-debs
-obj
+.theos/
+theos/
+debs/
+obj/
 _
 
 *.deb
