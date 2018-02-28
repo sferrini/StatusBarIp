@@ -3,7 +3,7 @@ Name: StatusBarIp
 Depends: mobilesubstrate
 Version: 0.0.1
 Architecture: iphoneos-arm
-Description: An awesome MobileSubstrate tweak!
+Description: An iOS tweak that shows your IP address on the status bar.
 Maintainer: Simone Ferrini
 Author: Simone Ferrini
 Section: Tweaks

@@ -1,6 +1,4 @@
-SDKVERSION=8.1
-
-include theos/makefiles/common.mk
+include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = StatusBarIp
 StatusBarIp_FILES = Tweak.xm
